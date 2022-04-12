@@ -2,36 +2,27 @@
 
 #include <memory>
 #include <vector>
-#include <variant>
 #include <string>
-#include <atomic>
+#include <chrono>
+#include <thread>
+#include <conio.h>
 
+// Alias for std::shared_ptr
 template<typename T>
 using Ref = std::shared_ptr<T>;
 
+// Alias for making std::shared_ptr(s)
 template<typename T, typename... Args>
 constexpr Ref<T> MakeRef(Args&& ... args)
 {
 	return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
-//#define FORWARD_TRANSITION(x) x(Ref<Node> next) : Transition(next) {}
-//#define FORWARD_STATE(x) x(const std::string& name, Ref<Node> next): State(name, next) {}
-
-static std::atomic<Ref<char>> keypressed;
-
-void inputFunc()
-{
-	if(!keypressed.load())
-		cin >> keypressed;
-
-}
-
 struct State;
 struct Branch;
 
 /// <summary>
-/// The Base node that acts as a State, and is overriden for more conditional and branching functionality.
+/// The Base Node, and is overriden for more conditional and branching functionality.
 /// </summary>
 struct Node
 {
@@ -46,12 +37,12 @@ struct Node
 };
 
 /// <summary>
-/// The current node this is the initial node.
+/// The current node. This is also the initial node.
 /// </summary>
 static Ref<Node> currentNode = nullptr;
 
 /// <summary>
-/// Transition switches from on State to the next.
+/// Transition switches from one State to the next.
 /// </summary>
 struct Transition : public Node
 {
@@ -74,13 +65,13 @@ struct Transition : public Node
 /// </summary>
 struct Branch : public Node
 {
-	std::vector<Transition> branches;
+	std::vector<Ref<Transition>> branches;
 
 	void On()
 	{
-		printf("\nBranching");
+		//printf("\nBranching");
 		for (auto& branch : branches)
-			branch.On();
+			branch->On();
 	}
 };
 
@@ -94,3 +85,42 @@ struct State : public Node
 	//State(const std::string& name, Ref<Node> next) : Node(name, next) {}
 	virtual void On() { printf("\nOn: %s", name.c_str()); currentNode = next; }
 };
+
+///////////////////////////////////
+/// Transition Variants
+/////////////////////////////////
+
+//* Preprocessor helpers to dynamically generate classes with less code... *//
+
+#define SINGULAR_TRANSITION_HELPER(x, type, defaultState) \
+struct x : Transition \
+{ \
+type condition; type state; \
+x(type condition) : condition(condition), state(defaultState) {} \
+x(type condition, type initialState) : condition(condition), state(initialState) {} \
+virtual bool Evaluate() { return condition == state; } \
+};
+
+#define SINGULAR_TRANSITION_HELPER_CONDITION(x, type, defaultState, _condition) \
+struct x : Transition \
+{ \
+type condition; type state; \
+x(type condition) : condition(condition), state(defaultState) {} \
+x(type condition, type initialState) : condition(condition), state(initialState) {} \
+virtual bool Evaluate() { return _condition; } \
+};
+
+//* Different Transition Types for differeing conditions *//
+
+SINGULAR_TRANSITION_HELPER(BoolEqTransition, bool, false)
+SINGULAR_TRANSITION_HELPER(IntEqTransition, int, 0)
+SINGULAR_TRANSITION_HELPER_CONDITION(IntGreaterTransition, int, 0, state > condition)
+SINGULAR_TRANSITION_HELPER_CONDITION(IntGreaterEqTransition, int, 0, state >= condition)
+SINGULAR_TRANSITION_HELPER_CONDITION(IntLessTransition, int, 0, state < condition)
+SINGULAR_TRANSITION_HELPER_CONDITION(IntLessEqTransition, int, 0, state <= condition)
+SINGULAR_TRANSITION_HELPER(FloatEqTransition, float, 0.0f)
+SINGULAR_TRANSITION_HELPER_CONDITION(FloatGreaterTransition, float, 0.0f, state > condition)
+SINGULAR_TRANSITION_HELPER_CONDITION(FloatGreaterEqTransition, float, 0.0f, state >= condition)
+SINGULAR_TRANSITION_HELPER_CONDITION(FloatLessTransition, float, 0.0f, state < condition)
+SINGULAR_TRANSITION_HELPER_CONDITION(FloatLessEqTransition, float, 0.0f, state <= condition)
+SINGULAR_TRANSITION_HELPER(CharEqTransition, char, '\0')
