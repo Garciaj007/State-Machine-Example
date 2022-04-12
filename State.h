@@ -6,12 +6,13 @@
 #include <chrono>
 #include <thread>
 #include <conio.h>
+#include <assert.h>
 
 // Alias for std::shared_ptr
 template<typename T>
 using Ref = std::shared_ptr<T>;
 
-// Alias for making std::shared_ptr(s)
+// Alias for std::make_shared
 template<typename T, typename... Args>
 constexpr Ref<T> MakeRef(Args&& ... args)
 {
@@ -27,12 +28,7 @@ struct Branch;
 struct Node
 {
 	std::string name;
-	Ref<Node> next;
-
 	Node() = default;
-	//Node(Ref<Node> next) : next(next) {}
-	//Node(const std::string& name, Ref<Node> next) : name(name), next(next) {}
-
 	virtual void On() = 0;
 };
 
@@ -46,7 +42,7 @@ static Ref<Node> currentNode = nullptr;
 /// </summary>
 struct Transition : public Node
 {
-	//Transition(Ref<Node> next) : Node(next) {}
+	Ref<Node> next;
 
 	void On()
 	{
@@ -56,7 +52,6 @@ struct Transition : public Node
 			currentNode = next;
 		}
 	}
-
 	virtual bool Evaluate() = 0;
 };
 
@@ -69,7 +64,6 @@ struct Branch : public Node
 
 	void On()
 	{
-		//printf("\nBranching");
 		for (auto& branch : branches)
 			branch->On();
 	}
@@ -81,9 +75,16 @@ struct Branch : public Node
 /// </summary>
 struct State : public Node
 {
+	std::vector<Ref<Transition>> transitions;
+
 	State(const std::string& name) { this->name = name; }
-	//State(const std::string& name, Ref<Node> next) : Node(name, next) {}
-	virtual void On() { printf("\nOn: %s", name.c_str()); currentNode = next; }
+	virtual void On() 
+	{ 
+		printf("\nOn: %s", name.c_str()); 
+		for (auto& transtion : transitions)
+			transtion->On();
+		//currentNode = next; 
+	}
 };
 
 ///////////////////////////////////

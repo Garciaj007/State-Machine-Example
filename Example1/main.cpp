@@ -9,9 +9,9 @@ int main()
 	auto lightOffState = MakeRef<State>("Light Off");
 
 	// Bind Our Nodes
-	lightOnState->next = lightOffTransition;
+	lightOnState->transitions = { lightOffTransition };
 	lightOffTransition->next = lightOffState;
-	lightOffState->next = lightOnTransition;
+	lightOffState->transitions = { lightOnTransition };
 	lightOnTransition->next = lightOnState;
 
 	// Initial State
@@ -37,6 +37,6 @@ int main()
 		currentNode->On();
 
 		// Prevents wasted CPU Cycles
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 }

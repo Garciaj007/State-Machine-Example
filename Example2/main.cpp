@@ -5,7 +5,6 @@ int main()
 	// Create Our Nodes...
 	auto sOpenTransition = MakeRef<BoolEqTransition>(true);
 	auto sClosedTransition = MakeRef<BoolEqTransition>(false);
-	auto sBranch = MakeRef<Branch>();
 
 	auto subSetOpenTransition = MakeRef<BoolEqTransition>(true);
 	auto subSetClosedTransition = MakeRef<BoolEqTransition>(false);
@@ -21,28 +20,28 @@ int main()
 	auto videoSettingsState = MakeRef<State>("Video Settings");
 	auto controllerSettingsState = MakeRef<State>("Controller Settings");
 
-	// Bind Our Nodes
-	sBranch->branches = { sClosedTransition, subSetOpenTransition };
-	subSettingBranch->branches = { audioTransition, videoTransition, controllerTransition };
-
-	mainMenuState->next = sOpenTransition;
+	// Bind Our Nodes...
+	mainMenuState->transitions = { sOpenTransition };
 	sOpenTransition->next = settingsState;
-	settingsState->next = sBranch;
+	settingsState->transitions = { sClosedTransition, subSetOpenTransition };
 
 	sClosedTransition->next = mainMenuState;
 
 	subSetOpenTransition->next = subSettingBranch;
+
+	subSettingBranch->branches = { audioTransition, videoTransition, controllerTransition };
+
 	audioTransition->next = audioSettingsState;
 	videoTransition->next = videoSettingsState;
 	controllerTransition->next = controllerSettingsState;
 
-	audioSettingsState->next = subSetClosedTransition;
-	videoTransition->next = subSetClosedTransition;
-	controllerSettingsState->next = subSetClosedTransition;
+	audioSettingsState->transitions = { subSetClosedTransition };
+	videoSettingsState->transitions = { subSetClosedTransition };
+	controllerSettingsState->transitions = { subSetClosedTransition };
 
 	subSetClosedTransition->next = settingsState;
 
-	// Initial State
+	// Setting Initial State
 	currentNode = mainMenuState;
 
 	while (true)
@@ -58,13 +57,15 @@ int main()
 		{
 		case 's': sOpenTransition->state = sClosedTransition->state = !sClosedTransition->state;
 			break;
-		case '1': 
+		case '1':
 		case '2':
 		case '3':
-			subSetOpenTransition->state = subSetClosedTransition->state = true;
+		if (sOpenTransition->Evaluate())
+		{
+			subSetOpenTransition->state = subSetClosedTransition->state = !subSetClosedTransition->state;
 			audioTransition->state = videoTransition->state = controllerTransition->state = key - '0';
-			break;
-		case 'q': subSetOpenTransition->state = subSetClosedTransition->state = false;
+		}
+		break;
 		}
 
 		// Update State Machine
